@@ -1,6 +1,7 @@
 package com.fasterxml.jackson.core.format;
 
 import java.io.*;
+import java.util.ArrayList;
 
 import com.fasterxml.jackson.core.*;
 
@@ -52,6 +53,46 @@ public class TestJsonFormatDetection extends com.fasterxml.jackson.core.BaseTest
     }
 
     /**
+     * test that same DataFormatDetector will be returned if same optimal or minimal match
+     * MatchStrength is requested and different one will be returned if different
+     * optimal or minimal match MatchStrength is requested
+     * test that the same DataFormatDetector will be returned if same look ahead bytes
+     * is requested and a different one will be returned if a different look ahead bytes
+     * count is requested
+     */
+    public void testChangeInternalProperties() throws Exception
+    {
+        DataFormatDetector defaultDetector = new DataFormatDetector(new JsonFactory());
+        assertSame(defaultDetector, defaultDetector.withOptimalMatch(MatchStrength.SOLID_MATCH));
+        assertNotSame(defaultDetector, defaultDetector.withOptimalMatch(MatchStrength.FULL_MATCH));
+        assertType(defaultDetector.withOptimalMatch(MatchStrength.FULL_MATCH), DataFormatDetector.class);
+        assertSame(defaultDetector, defaultDetector.withMinimalMatch(MatchStrength.WEAK_MATCH));
+        assertNotSame(defaultDetector, defaultDetector.withMinimalMatch(MatchStrength.SOLID_MATCH));
+        assertType(defaultDetector.withMinimalMatch(MatchStrength.SOLID_MATCH), DataFormatDetector.class);
+        assertSame(defaultDetector,
+                defaultDetector.withMaxInputLookahead(DataFormatDetector.DEFAULT_MAX_INPUT_LOOKAHEAD));
+        assertNotSame(defaultDetector,
+                defaultDetector.withMaxInputLookahead(DataFormatDetector.DEFAULT_MAX_INPUT_LOOKAHEAD+1));
+        assertType(defaultDetector.withMaxInputLookahead(DataFormatDetector.DEFAULT_MAX_INPUT_LOOKAHEAD+1),
+                DataFormatDetector.class);
+    }
+
+    public void testToString() throws Exception
+    {
+        JsonFactory jsonF1 = new JsonFactory();
+        JsonFactory jsonF2 = new JsonFactory();
+        JsonFactory jsonF3 = new JsonFactory();
+        ArrayList<JsonFactory> jsonFCollection = new ArrayList<JsonFactory>();
+        DataFormatDetector emptyArrayDetector = new DataFormatDetector(jsonFCollection);
+        assertEquals("[]", emptyArrayDetector.toString());
+        jsonFCollection.add(jsonF1);
+        jsonFCollection.add(jsonF2);
+        jsonFCollection.add(jsonF3);
+        DataFormatDetector detector = new DataFormatDetector(jsonFCollection);
+        assertEquals("[JSON, JSON, JSON]", detector.toString());
+    }
+
+    /**
      * While JSON String is not a strong match alone, it should
      * be detected unless some better match is available
      */
@@ -63,6 +104,7 @@ public class TestJsonFormatDetection extends com.fasterxml.jackson.core.BaseTest
         final byte[] bytes = JSON.getBytes("UTF-8");
 
         _testSimpleValidString(jsonF, detector.findFormat(bytes));
+        _testSimpleValidString(jsonF, detector.findFormat(bytes, 0, 7));
         _testSimpleValidString(jsonF, detector.findFormat(new ByteArrayInputStream(bytes)));
     }
 
